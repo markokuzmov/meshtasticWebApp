@@ -48,7 +48,6 @@ def main():
     
     print("Listening for environment telemetry... Press Ctrl+C to exit.")
     try:
-        # Keep the script running to listen indefinitely
         while True:
             time.sleep(1)
     except KeyboardInterrupt:

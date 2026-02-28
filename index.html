@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balloon Telemetry Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+        }
+        .chart-container {
+            width: 80%;
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Live Environment Telemetry</h2>
+    <div class="chart-container">
+        <canvas id="telemetryChart"></canvas>
+    </div>
+
+    <script>
+        // Set up the Chart.js configuration
+        const ctx = document.getElementById('telemetryChart').getContext('2d');
+        const telemetryChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], // This will hold our timestamps
+                datasets: [
+                    {
+                        label: 'Pressure (mb)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        data: [], // Pressure data points
+                        yAxisID: 'y', // Links to the left axis
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Temperature (°C)',
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        data: [], // Temperature data points
+                        yAxisID: 'y1', // Links to the right axis
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: 'Pressure' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: 'Temperature' },
+                        grid: { drawOnChartArea: false } // Prevents gridline clash
+                    }
+                }
+            }
+        });
+
+        // Function to fetch data from your FastAPI backend
+        async function fetchTelemetry() {
+            try {
+                const response = await fetch('http://localhost:8000/api/telemetry');
+                const data = await response.json();
+
+                // Clear existing data so we don't duplicate
+                telemetryChart.data.labels = [];
+                telemetryChart.data.datasets[0].data = [];
+                telemetryChart.data.datasets[1].data = [];
+
+                // Loop through the data and push it into the chart
+                data.forEach(entry => {
+                    // Convert the ISO timestamp into a readable time (e.g., "5:30:15 PM")
+                    const timeString = new Date(entry.timestamp).toLocaleTimeString();
+                    
+                    telemetryChart.data.labels.push(timeString);
+                    telemetryChart.data.datasets[0].data.push(entry.pressure);
+                    telemetryChart.data.datasets[1].data.push(entry.temperature);
+                });
+
+                // Tell the chart to visually update
+                telemetryChart.update();
+            } catch (error) {
+                console.error("Error fetching telemetry:", error);
+            }
+        }
+
+        // Fetch data immediately on load, then poll every 5 seconds
+        fetchTelemetry();
+        setInterval(fetchTelemetry, 5000);
+    </script>
+
+</body>
+</html>

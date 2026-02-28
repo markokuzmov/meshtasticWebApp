@@ -1,5 +1,8 @@
+import json
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List
 
@@ -13,19 +16,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 1. We updated this model to match what the listener is actually sending
 class EnvironmentData(BaseModel):
     pressure: float
     temperature: float
     timestamp: str
 
-flight_logs = []
+LOG_FILE = "flight_logs.json"
+
+# Load existing data when the server starts, or create an empty list
+if os.path.exists(LOG_FILE):
+    with open(LOG_FILE, "r") as f:
+        flight_logs = json.load(f)
+else:
+    flight_logs = []
+
+def save_logs_to_disk():
+    """Helper function to write the current memory to the JSON file."""
+    with open(LOG_FILE, "w") as f:
+        json.dump(flight_logs, f, indent=4)
+
+@app.get("/")
+def serve_frontend():
+    """Serves the frontend dashboard on the root URL."""
+    return FileResponse("index.html")
 
 @app.post("/api/telemetry")
 def receive_telemetry(data: EnvironmentData):
     """The listener script will POST barometric data here."""
+    # Append the new data to our list
     flight_logs.append(data.model_dump())
-    return {"status": "success", "message": "Environment telemetry received"}
+    
+    # Immediately save the updated list to the hard drive
+    save_logs_to_disk()
+    
+    return {"status": "success", "message": "Environment telemetry saved to disk"}
 
 @app.get("/api/telemetry", response_model=List[EnvironmentData])
 def get_telemetry():
