@@ -21,7 +21,7 @@ class EnvironmentData(BaseModel):
     temperature: float
     timestamp: str
 
-LOG_FILE = "flight_logs.json"
+LOG_FILE = "../data/flight_logs.json"
 
 # Load existing data when the server starts, or create an empty list
 if os.path.exists(LOG_FILE):
